@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Data Tracer — Enverus Intelligence Research</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,sans-serif;font-size:13px;color:#1f2937;background:#f3f4f6;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.header{background:#F79130;color:#fff;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.header-left{display:flex;align-items:center;gap:10px}
+.header-title{font-weight:600;font-size:14px}
+.header-sub{color:rgba(255,255,255,.9);font-size:11px}
+.header-sep{color:rgba(255,255,255,.5);font-size:11px}
+.header-right{display:flex;align-items:center;gap:10px}
+.cursor-readout{color:rgba(255,255,255,.8);font-size:11px;font-family:monospace}
+.btn{padding:5px 12px;border-radius:4px;border:1px solid #d1d5db;background:#e5e7eb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s}
+.btn:hover{background:#d1d5db}
+.btn-accent{background:#53BD2E;border-color:#53BD2E;color:#fff}
+.btn-accent:hover{background:#48a828}
+.btn-header{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff}
+.btn-header:hover{background:rgba(255,255,255,.3)}
+.btn-red{background:#fef2f2;border-color:#fca5a5;color:#dc2626}
+.btn-red:hover{background:#fee2e2}
+.btn-warn{background:#eab308;border-color:#eab308;color:#fff}
+.btn-warn:hover{background:#ca8a04}
+.btn-ghost{background:transparent;border-color:transparent;color:#6b7280}
+.btn-ghost:hover{color:#1f2937;background:#f3f4f6}
+.tool-active{background:#53BD2E!important;border-color:#53BD2E!important;color:#fff!important}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:268px;min-width:268px;border-right:1px solid #d1d5db;background:#f9fafb;overflow-y:auto;flex-shrink:0}
+.section{background:#fff;border:1px solid #e5e7eb;margin-bottom:8px}
+.section-head{background:#f3f4f6;padding:4px 8px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
+.section-head h3{color:#4b5563;font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.section-body{padding:8px}
+.form-row{display:flex;gap:4px;margin-bottom:4px;align-items:center}
+.form-label{font-size:11px;color:#6b7280;white-space:nowrap}
+.form-input{background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:11px;font-family:monospace;color:#1f2937;outline:none;flex:1;min-width:0}
+.form-input:focus{border-color:#53BD2E}
+.form-select{background:#fff;border:1px solid #d1d5db;border-radius:4px;padding:3px 6px;font-size:11px;color:#1f2937;outline:none}
+.form-select:focus{border-color:#53BD2E}
+.series-item{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;margin-bottom:4px;cursor:pointer;border:1px solid #e5e7eb;background:#fff;transition:border-color .15s}
+.series-item:hover{border-color:#9ca3af}
+.series-item.active{border-color:#53BD2E;background:#53BD2E10}
+.series-color{width:16px;height:16px;border-radius:3px;border:none;cursor:pointer;padding:0;flex-shrink:0}
+.series-name{flex:1;border:none;background:transparent;font-size:11px;color:#1f2937;outline:none;min-width:0}
+.series-count{font-size:10px;color:#9ca3af;font-family:monospace}
+.series-del{color:#fca5a5;cursor:pointer;font-size:12px;opacity:0;transition:opacity .15s}
+.series-item:hover .series-del{opacity:1}
+.series-del:hover{color:#dc2626}
+.controls-bar{background:#fff;border-bottom:1px solid #e5e7eb;padding:6px 8px;flex-shrink:0;overflow-x:auto}
+.controls-inner{display:flex;align-items:center;gap:10px;font-size:11px;white-space:nowrap}
+.controls-sep{color:#d1d5db}
+.tool-btn-inline{padding:3px 8px;border-radius:4px;border:1px solid #d1d5db;background:#fff;cursor:pointer;font-size:11px;font-weight:500;color:#4b5563;transition:all .15s}
+.tool-btn-inline:hover{background:#f3f4f6}
+.tool-btn-inline.active{background:#53BD2E;border-color:#53BD2E;color:#fff}
+.canvas-area{flex:1;position:relative;overflow:hidden;background:#e5e7eb}
+.canvas-empty{display:flex;align-items:center;justify-content:center;height:100%;color:#9ca3af;text-align:center}
+.table-area{height:170px;flex-shrink:0;border-top:1px solid #d1d5db;background:#fff;overflow:auto}
+.data-table{width:100%;border-collapse:collapse;font-size:11px}
+.data-table th{position:sticky;top:0;background:#f3f4f6;padding:4px 8px;text-align:left;font-weight:600;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid #e5e7eb;z-index:1}
+.data-table td{padding:3px 8px;border-bottom:1px solid #f3f4f6;font-family:monospace;color:#1f2937}
+.data-table tr:hover td{background:#53BD2E10}
+.del-pt{color:#fca5a5;cursor:pointer;opacity:0;transition:opacity .15s}
+.data-table tr:hover .del-pt{opacity:1}
+.del-pt:hover{color:#dc2626}
+.footer{background:#e5e7eb;border-top:1px solid #d1d5db;padding:4px 16px;font-size:11px;color:#6b7280;display:flex;justify-content:space-between;flex-shrink:0}
+.help{font-size:10px;color:#9ca3af;margin-top:4px;line-height:1.4}
+.cal-ok{background:#53BD2E15;border:1px solid #53BD2E60;border-radius:4px;padding:4px 6px;font-size:10px;color:#3a8520;font-weight:500;margin-top:6px}
+.cal-pending{background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:4px 6px;font-size:10px;color:#b45309;font-weight:500;margin-top:6px}
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(80px);background:#1f2937;color:#fff;padding:8px 20px;border-radius:6px;font-size:12px;font-weight:500;z-index:100;transition:transform .3s ease;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.upload-zone{border:2px dashed #d1d5db;border-radius:6px;padding:12px;text-align:center;cursor:pointer;transition:all .15s}
+.upload-zone:hover{border-color:#F79130;background:#FFF7ED}
+.upload-zone.loaded{border-color:#53BD2E;border-style:solid;padding:6px;background:#53BD2E10}
+.sub-label{font-size:10px;font-weight:600;color:#6b7280;margin-bottom:2px;margin-top:6px}
+.placed-check{color:#53BD2E;font-size:10px;font-weight:600;margin-left:4px}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <span class="header-title">Chart Tracer</span>
+    <span class="header-sep">|</span>
+    <span class="header-sub">Enverus Intelligence<sup>®</sup> Research</span>
+  </div>
+  <div class="header-right">
+    <span class="cursor-readout" id="cursorReadout"></span>
+    <button class="btn btn-header" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+</div>
+<div class="controls-bar">
+  <div class="controls-inner">
+    <span style="color:#9ca3af;font-weight:500">Tool:</span>
+    <button class="tool-btn-inline active" id="tb_point" onclick="setTool('point')">• Point</button>
+    <button class="tool-btn-inline" id="tb_draw" onclick="setTool('draw')">✎ Draw</button>
+    <button class="tool-btn-inline" id="tb_erase" onclick="setTool('erase')">⌫ Erase</button>
+    <button class="tool-btn-inline" id="tb_pan" onclick="setTool('pan')">✋ Pan</button>
+    <span class="controls-sep">|</span>
+    <button class="btn btn-ghost" onclick="undoLast()" style="padding:3px 6px">↩ Undo</button>
+    <button class="btn btn-ghost" onclick="clearActive()" style="padding:3px 6px;color:#dc2626">✕ Clear</button>
+    <span class="controls-sep">|</span>
+    <span style="font-family:monospace;color:#9ca3af" id="ptCount">0 pts</span>
+    <span id="calBadge"></span>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar" style="padding:8px">
+    <div class="section">
+      <div class="section-head"><h3>Image</h3></div>
+      <div class="section-body">
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+          <span style="font-size:11px;color:#6b7280" id="uploadLabel">Drop chart image or click to browse</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this.files[0])">
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h3>Axis Calibration</h3><button class="btn btn-ghost" onclick="resetCalibration()" style="padding:2px 6px;font-size:10px">Reset</button></div>
+      <div class="section-body">
+        <p class="help" style="margin-bottom:6px;margin-top:0">Define each axis by picking 2 points along it and entering their values.</p>
+
+        <!-- X Axis -->
+        <div style="border:1px solid #e5e7eb;border-radius:4px;padding:6px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <span style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.5px">X-Axis</span>
+            <select class="form-select" id="xAxisType" style="font-size:10px;padding:2px 4px" onchange="onXTypeChange()">
+              <option value="date">Date</option>
+              <option value="number">Numeric</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <span class="form-label" style="width:18px;font-weight:600;color:#F79130">X1</span>
+            <input class="form-input" id="x1" placeholder="e.g. 2019-12-04" oninput="tryCalibrate()">
+            <span id="x1status" style="width:14px;text-align:center"></span>
+          </div>
+          <div class="form-row">
+            <span class="form-label" style="width:18px;font-weight:600;color:#F79130">X2</span>
+            <input class="form-input" id="x2" placeholder="e.g. 2021-04-27" oninput="tryCalibrate()">
+            <span id="x2status" style="width:14px;text-align:center"></span>
+          </div>
+          <button class="btn" id="pickXBtn" onclick="startPickingX()" style="width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px">Pick X1 & X2 on Chart</button>
+        </div>
+
+        <!-- Y Axis -->
+        <div style="border:1px solid #e5e7eb;border-radius:4px;padding:6px;margin-bottom:6px">
+          <div style="margin-bottom:4px"><span style="font-size:10px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.5px">Y-Axis</span></div>
+          <div class="form-row">
+            <span class="form-label" style="width:18px;font-weight:600;color:#F79130">Y1</span>
+            <input class="form-input" id="y1" placeholder="e.g. 30" type="number" step="any" oninput="tryCalibrate()">
+            <span id="y1status" style="width:14px;text-align:center"></span>
+          </div>
+          <div class="form-row">
+            <span class="form-label" style="width:18px;font-weight:600;color:#F79130">Y2</span>
+            <input class="form-input" id="y2" placeholder="e.g. 80" type="number" step="any" oninput="tryCalibrate()">
+            <span id="y2status" style="width:14px;text-align:center"></span>
+          </div>
+          <button class="btn" id="pickYBtn" onclick="startPickingY()" style="width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px">Pick Y1 & Y2 on Chart</button>
+        </div>
+
+        <div id="calStatus"></div>
+      </div>
+    </div>
+
+    <!-- Sample Rate -->
+    <div class="section">
+      <div class="section-head"><h3>Sample Rate</h3></div>
+      <div class="section-body">
+        <div class="form-row" style="margin-bottom:0">
+          <span class="form-label">Interval:</span>
+          <select class="form-select" id="sampleRate" style="flex:1" onchange="renderTable()">
+            <option value="raw">Raw (no resampling)</option>
+            <option value="hourly">Hourly</option>
+            <option value="6h">Every 6 hours</option>
+            <option value="12h">Every 12 hours</option>
+            <option value="daily" selected>Daily</option>
+            <option value="3day">Every 3 days</option>
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Biweekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <p class="help">Resamples all series to a common time grid. Missing values are linearly interpolated.</p>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h3>Series</h3><button class="btn btn-ghost" onclick="addSeries()" style="padding:2px 6px;font-size:10px;color:#53BD2E;font-weight:600">+ Add</button></div>
+      <div class="section-body" id="seriesList"></div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h3>View</h3></div>
+      <div class="section-body">
+        <div class="form-row" style="margin-bottom:0">
+          <button class="btn" onclick="zoomBy(1.3)" style="flex:1;justify-content:center">+</button>
+          <button class="btn" onclick="zoomBy(1/1.3)" style="flex:1;justify-content:center">−</button>
+          <button class="btn" onclick="fitZoom()" style="flex:1;justify-content:center">Fit</button>
+        </div>
+        <div style="text-align:center;font-size:10px;color:#9ca3af;font-family:monospace;margin-top:2px" id="zoomLabel">100%</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-head"><h3>Shortcuts</h3></div>
+      <div class="section-body">
+        <div style="font-size:11px;color:#6b7280;line-height:1.6">
+          <b style="color:#374151">Scroll</b> — Zoom<br><b style="color:#374151">Middle-click / Space</b> — Pan<br><b style="color:#374151">Ctrl+Z</b> — Undo<br><b style="color:#374151">1 / 2 / 3</b> — Point / Draw / Erase
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+    <div class="canvas-area" id="canvasArea">
+      <div class="canvas-empty" id="emptyState">
+        <div><div style="font-size:48px;opacity:.3;margin-bottom:8px;color:#F79130">◇</div><div style="font-size:13px">Drop a chart image or click to browse</div><div style="font-size:11px;margin-top:4px;color:#bbb">Supports PNG, JPG, SVG</div></div>
+      </div>
+      <canvas id="canvas" style="display:none;position:absolute;top:0;left:0"></canvas>
+    </div>
+    <div class="table-area">
+      <table class="data-table"><thead id="tableHead"><tr><th>X</th></tr></thead><tbody id="tableBody"></tbody></table>
+    </div>
+  </div>
+</div>
+<div class="footer"><span>Chart Data Tracer • v1.0 • Enverus Intelligence Research</span><span id="footerStats" style="font-family:monospace">0 points</span></div>
+<div class="toast" id="toast"></div>
+<script>
+var img=null,imgW=0,imgH=0,zoom=1,panX=0,panY=0,isPanning=false,panSX=0,panSY=0,panSPX=0,panSPY=0;
+// Calibration: separate X and Y axis references
+// xPx = [pixel-x of X1 click, pixel-x of X2 click]  (only the x-component matters)
+// yPx = [pixel-y of Y1 click, pixel-y of Y2 click]  (only the y-component matters)
+var xPx=[null,null], yPx=[null,null];
+var calMode=null; // null | 'x1' | 'x2' | 'y1' | 'y2'
+var transform=null;
+var COLORS=['#2563eb','#dc2626','#16a34a','#d97706','#9333ea','#0891b2','#db2777','#65a30d'];
+var seriesData=[{name:'Series 1',color:COLORS[0],points:[]}];
+var activeIdx=0,tool='point',isDrawingLine=false,lastDrawPt=null;
+var canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d'),canvasArea=document.getElementById('canvasArea');
+var uz=document.getElementById('uploadZone');
+uz.addEventListener('dragover',function(e){e.preventDefault();uz.style.borderColor='#F79130';});
+uz.addEventListener('dragleave',function(){uz.style.borderColor='';});
+uz.addEventListener('drop',function(e){e.preventDefault();uz.style.borderColor='';if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
+function handleFile(f){if(!f)return;var r=new FileReader();r.onload=function(e){img=new Image();img.onload=function(){imgW=img.width;imgH=img.height;document.getElementById('emptyState').style.display='none';canvas.style.display='block';uz.classList.add('loaded');document.getElementById('uploadLabel').innerHTML='<span style="color:#3a8520;font-weight:500">✓ '+f.name+' ('+imgW+'×'+imgH+')</span>';fitZoom();};img.src=e.target.result;};r.readAsDataURL(f);}
+function zoomBy(f){zoom=Math.max(0.05,Math.min(30,zoom*f));render();document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';}
+function fitZoom(){if(!imgW)return;var r=canvasArea.getBoundingClientRect();zoom=Math.min((r.width-20)/imgW,(r.height-20)/imgH,4);panX=0;panY=0;render();document.getElementById('zoomLabel').textContent=Math.round(zoom*100)+'%';}
+function mouseToImg(e){var r=canvasArea.getBoundingClientRect();return[(e.clientX-r.left-r.width/2-panX)/zoom+imgW/2,(e.clientY-r.top-r.height/2-panY)/zoom+imgH/2];}
+
+// ── Transform: independent X and Y axis mapping ─────────
+function pixelToValue(px,py){
+  if(!transform)return null;
+  return{x:transform.vx1+(px-transform.px1)*transform.sx, y:transform.vy1+(py-transform.py1)*transform.sy};
+}
+function buildTransform(){
+  if(xPx[0]===null||xPx[1]===null||yPx[0]===null||yPx[1]===null)return;
+  var xt=document.getElementById('xAxisType').value;
+  var x1s=document.getElementById('x1').value, x2s=document.getElementById('x2').value;
+  var y1v=parseFloat(document.getElementById('y1').value), y2v=parseFloat(document.getElementById('y2').value);
+  if(!x1s||!x2s||isNaN(y1v)||isNaN(y2v))return;
+  var vx1,vx2;
+  if(xt==='date'){vx1=new Date(x1s).getTime();vx2=new Date(x2s).getTime();if(isNaN(vx1)||isNaN(vx2))return;}
+  else{vx1=parseFloat(x1s);vx2=parseFloat(x2s);if(isNaN(vx1)||isNaN(vx2))return;}
+  var dxPx=xPx[1]-xPx[0], dyPx=yPx[1]-yPx[0];
+  transform={
+    px1:xPx[0], vx1:vx1, sx:dxPx?(vx2-vx1)/dxPx:1,
+    py1:yPx[0], vy1:y1v, sy:dyPx?(y2v-y1v)/dyPx:1
+  };
+  document.getElementById('calStatus').innerHTML='<div class="cal-ok">✓ Calibrated — ready to trace</div>';
+  document.getElementById('calBadge').innerHTML='<span style="color:#53BD2E;font-weight:600">✓ Calibrated</span>';
+  showToast('Calibrated!');renderTable();
+}
+function tryCalibrate(){buildTransform();}
+
+// ── Picking modes ────────────────────────────────────────
+function startPickingX(){
+  xPx=[null,null]; calMode='x1';
+  document.getElementById('pickXBtn').textContent='Click X1 on chart...';
+  document.getElementById('pickXBtn').className='btn btn-warn';
+  document.getElementById('x1status').innerHTML=''; document.getElementById('x2status').innerHTML='';
+  updateCalBadge(); render();
+}
+function startPickingY(){
+  yPx=[null,null]; calMode='y1';
+  document.getElementById('pickYBtn').textContent='Click Y1 on chart...';
+  document.getElementById('pickYBtn').className='btn btn-warn';
+  document.getElementById('y1status').innerHTML=''; document.getElementById('y2status').innerHTML='';
+  updateCalBadge(); render();
+}
+function resetCalibration(){
+  xPx=[null,null]; yPx=[null,null]; transform=null; calMode=null;
+  document.getElementById('pickXBtn').textContent='Pick X1 & X2 on Chart';
+  document.getElementById('pickXBtn').className='btn';
+  document.getElementById('pickXBtn').style.cssText='width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px';
+  document.getElementById('pickYBtn').textContent='Pick Y1 & Y2 on Chart';
+  document.getElementById('pickYBtn').className='btn';
+  document.getElementById('pickYBtn').style.cssText='width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px';
+  document.getElementById('x1status').innerHTML=''; document.getElementById('x2status').innerHTML='';
+  document.getElementById('y1status').innerHTML=''; document.getElementById('y2status').innerHTML='';
+  document.getElementById('calStatus').innerHTML='';
+  updateCalBadge(); render();
+}
+function updateCalBadge(){
+  var xOk=xPx[0]!==null&&xPx[1]!==null, yOk=yPx[0]!==null&&yPx[1]!==null;
+  if(transform) document.getElementById('calBadge').innerHTML='<span style="color:#53BD2E;font-weight:600">✓ Calibrated</span>';
+  else if(calMode) document.getElementById('calBadge').innerHTML='<span style="color:#d97706;font-weight:600">⚠ Picking...</span>';
+  else document.getElementById('calBadge').innerHTML='<span style="color:#d97706;font-weight:600">⚠ Not calibrated</span>';
+}
+function onXTypeChange(){var t=document.getElementById('xAxisType').value;document.getElementById('x1').placeholder=t==='date'?'e.g. 2019-12-04':'X1 value';document.getElementById('x2').placeholder=t==='date'?'e.g. 2021-04-27':'X2 value';}
+function fmtX(v){if(document.getElementById('xAxisType').value==='date'){var d=new Date(v);return isNaN(d.getTime())?'-':d.toISOString().slice(0,10);}return typeof v==='number'?v.toFixed(2):'-';}
+function fmtY(v){return typeof v==='number'?v.toFixed(2):'-';}
+
+// ── Series ───────────────────────────────────────────────
+function renderSeriesList(){var h='';for(var i=0;i<seriesData.length;i++){var s=seriesData[i],cls=i===activeIdx?'series-item active':'series-item';h+='<div class="'+cls+'" onclick="setActive('+i+')">';h+='<input type="color" class="series-color" value="'+s.color+'" onclick="event.stopPropagation()" onchange="seriesData['+i+'].color=this.value;render();renderSeriesList()">';h+='<input class="series-name" value="'+s.name+'" onclick="event.stopPropagation()" onchange="seriesData['+i+'].name=this.value;renderTable()">';h+='<span class="series-count">'+s.points.length+'</span>';if(seriesData.length>1)h+='<span class="series-del" onclick="event.stopPropagation();deleteSeries('+i+')">✕</span>';h+='</div>';}document.getElementById('seriesList').innerHTML=h;}
+function setActive(i){activeIdx=i;renderSeriesList();}
+function addSeries(){var i=seriesData.length;seriesData.push({name:'Series '+(i+1),color:COLORS[i%COLORS.length],points:[]});activeIdx=i;renderSeriesList();}
+function deleteSeries(i){if(seriesData.length<=1)return;seriesData.splice(i,1);if(activeIdx>=seriesData.length)activeIdx=seriesData.length-1;renderSeriesList();renderTable();render();}
+function addPoint(ix,iy){seriesData[activeIdx].points.push([ix,iy]);render();renderSeriesList();renderTable();}
+function undoLast(){if(!seriesData[activeIdx].points.length)return;seriesData[activeIdx].points.pop();render();renderSeriesList();renderTable();}
+function clearActive(){seriesData[activeIdx].points=[];render();renderSeriesList();renderTable();}
+function eraseNear(ix,iy){var r=10/zoom,pts=seriesData[activeIdx].points,nw=[];for(var i=0;i<pts.length;i++){var dx=pts[i][0]-ix,dy=pts[i][1]-iy;if(Math.sqrt(dx*dx+dy*dy)>r)nw.push(pts[i]);}seriesData[activeIdx].points=nw;render();renderSeriesList();renderTable();}
+function deletePoint(si,pi){seriesData[si].points.splice(pi,1);render();renderSeriesList();renderTable();}
+function dedupeByX(){var pts=seriesData[activeIdx].points;if(pts.length<2)return;var bucket={};for(var i=0;i<pts.length;i++){var key=Math.round(pts[i][0]);bucket[key]=pts[i];}var result=[];for(var k in bucket)result.push(bucket[k]);seriesData[activeIdx].points=result;render();}
+function setTool(t){tool=t;var ids=['point','draw','erase','pan'];for(var i=0;i<ids.length;i++)document.getElementById('tb_'+ids[i]).className=ids[i]===t?'tool-btn-inline active':'tool-btn-inline';updateCursor();}
+function updateCursor(){canvasArea.style.cursor=calMode?'crosshair':tool==='pan'?'grab':tool==='erase'?'cell':'crosshair';}
+
+// ── Render ───────────────────────────────────────────────
+function render(){
+  if(!img)return;var r=canvasArea.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  canvas.width=r.width*dpr;canvas.height=r.height*dpr;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';
+  ctx.scale(dpr,dpr);ctx.clearRect(0,0,r.width,r.height);ctx.fillStyle='#e5e7eb';ctx.fillRect(0,0,r.width,r.height);
+  ctx.save();ctx.translate(r.width/2+panX,r.height/2+panY);ctx.scale(zoom,zoom);
+  ctx.drawImage(img,-imgW/2,-imgH/2,imgW,imgH);ctx.translate(-imgW/2,-imgH/2);
+
+  // Draw X reference lines (vertical)
+  for(var xi=0;xi<2;xi++){
+    if(xPx[xi]===null)continue;
+    ctx.strokeStyle='#F79130';ctx.lineWidth=1.5/zoom;ctx.setLineDash([4/zoom,4/zoom]);
+    ctx.beginPath();ctx.moveTo(xPx[xi],0);ctx.lineTo(xPx[xi],imgH);ctx.stroke();ctx.setLineDash([]);
+    // Label
+    ctx.font='bold '+(10/zoom)+'px sans-serif';ctx.fillStyle='#F79130';
+    ctx.fillText('X'+(xi+1),xPx[xi]+4/zoom,14/zoom);
+  }
+  // Draw Y reference lines (horizontal)
+  for(var yi=0;yi<2;yi++){
+    if(yPx[yi]===null)continue;
+    ctx.strokeStyle='#53BD2E';ctx.lineWidth=1.5/zoom;ctx.setLineDash([4/zoom,4/zoom]);
+    ctx.beginPath();ctx.moveTo(0,yPx[yi]);ctx.lineTo(imgW,yPx[yi]);ctx.stroke();ctx.setLineDash([]);
+    ctx.font='bold '+(10/zoom)+'px sans-serif';ctx.fillStyle='#53BD2E';
+    ctx.fillText('Y'+(yi+1),4/zoom,yPx[yi]-4/zoom);
+  }
+
+  // Series
+  for(var si=0;si<seriesData.length;si++){var s=seriesData[si];if(!s.points.length)continue;
+    var sorted=s.points.slice().sort(function(a,b){return a[0]-b[0];});
+    if(sorted.length>1){ctx.strokeStyle=s.color;ctx.lineWidth=1.5/zoom;ctx.globalAlpha=0.5;ctx.beginPath();ctx.moveTo(sorted[0][0],sorted[0][1]);for(var j=1;j<sorted.length;j++)ctx.lineTo(sorted[j][0],sorted[j][1]);ctx.stroke();ctx.globalAlpha=1;}
+    var pr=(si===activeIdx?4:2.5)/zoom;
+    for(var j=0;j<s.points.length;j++){ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(s.points[j][0],s.points[j][1],pr,0,Math.PI*2);ctx.fill();}}
+  ctx.restore();
+  var total=0;for(var i=0;i<seriesData.length;i++)total+=seriesData[i].points.length;
+  document.getElementById('ptCount').textContent=total+' pts';
+  document.getElementById('footerStats').textContent=total+' points across '+seriesData.length+' series';
+}
+
+// ── Table ────────────────────────────────────────────────
+// ── Resampling & Interpolation ───────────────────────────
+function getSampleMs(){
+  var rate=document.getElementById('sampleRate').value;
+  var h=3600000,d=h*24;
+  if(rate==='hourly')return h;
+  if(rate==='6h')return 6*h;
+  if(rate==='12h')return 12*h;
+  if(rate==='daily')return d;
+  if(rate==='3day')return 3*d;
+  if(rate==='weekly')return 7*d;
+  if(rate==='biweekly')return 14*d;
+  if(rate==='monthly')return 30*d;
+  return 0; // raw
+}
+
+// Linear interpolation of Y at a given X from sorted [x,y] pairs
+function lerpAtX(pts, xTarget){
+  if(pts.length===0)return null;
+  if(xTarget<=pts[0][0])return pts[0][1];
+  if(xTarget>=pts[pts.length-1][0])return pts[pts.length-1][1];
+  for(var i=0;i<pts.length-1;i++){
+    if(xTarget>=pts[i][0]&&xTarget<=pts[i+1][0]){
+      var t=(xTarget-pts[i][0])/(pts[i+1][0]-pts[i][0]);
+      return pts[i][1]+(pts[i+1][1]-pts[i][1])*t;
+    }
+  }
+  return null;
+}
+
+function buildWideData(){
+  if(!transform)return{rows:[]};
+  var isDate=document.getElementById('xAxisType').value==='date';
+  var sampleMs=getSampleMs();
+
+  // Convert each series to sorted [xVal, yVal] arrays
+  var seriesXY=[];
+  var globalMin=Infinity, globalMax=-Infinity;
+  for(var si=0;si<seriesData.length;si++){
+    var pairs=[];
+    var s=seriesData[si];
+    for(var pi=0;pi<s.points.length;pi++){
+      var v=pixelToValue(s.points[pi][0],s.points[pi][1]);
+      if(v){pairs.push([v.x,v.y]);if(v.x<globalMin)globalMin=v.x;if(v.x>globalMax)globalMax=v.x;}
+    }
+    pairs.sort(function(a,b){return a[0]-b[0];});
+    seriesXY.push(pairs);
+  }
+  if(globalMin===Infinity)return{rows:[]};
+
+  // Build X grid
+  var xGrid=[];
+  if(sampleMs>0&&isDate){
+    // Regular time grid
+    // Snap start to a clean boundary
+    var startD=new Date(globalMin);
+    if(sampleMs>=86400000){startD.setUTCHours(0,0,0,0);}
+    var t=startD.getTime();
+    while(t<=globalMax+sampleMs*0.1){
+      xGrid.push(t);
+      if(document.getElementById('sampleRate').value==='monthly'){
+        // Advance by calendar month
+        var d=new Date(t);d.setUTCMonth(d.getUTCMonth()+1);t=d.getTime();
+      } else {
+        t+=sampleMs;
+      }
+    }
+  } else {
+    // Raw mode: collect all unique X from all series
+    var xSet={};
+    for(var si=0;si<seriesXY.length;si++){
+      for(var i=0;i<seriesXY[si].length;i++){
+        var xr=Math.round(seriesXY[si][i][0]*1000)/1000;
+        xSet[xr]=seriesXY[si][i][0];
+      }
+    }
+    var xKeys=Object.keys(xSet);xKeys.sort(function(a,b){return a-b;});
+    for(var k=0;k<xKeys.length;k++) xGrid.push(xSet[xKeys[k]]);
+  }
+
+  // For each X grid point, get Y for each series (interpolate if needed)
+  var rows=[];
+  for(var gi=0;gi<xGrid.length;gi++){
+    var xVal=xGrid[gi];
+    var row={x:xVal,ys:{}};
+    for(var si=0;si<seriesData.length;si++){
+      var pairs=seriesXY[si];
+      if(pairs.length===0){row.ys[si]=null;continue;}
+      // Only interpolate within the series range
+      if(xVal<pairs[0][0]-sampleMs*0.5||xVal>pairs[pairs.length-1][0]+sampleMs*0.5){
+        row.ys[si]=null;
+      } else {
+        var yVal=lerpAtX(pairs,xVal);
+        row.ys[si]=yVal!==null?{y:yVal}:null;
+      }
+    }
+    rows.push(row);
+  }
+  return{rows:rows};
+}
+
+function renderTable(){
+  var thead=document.getElementById('tableHead');
+  var tbody=document.getElementById('tableBody');
+  if(!transform){
+    thead.innerHTML='<tr><th>X</th></tr>';
+    tbody.innerHTML='<tr><td style="text-align:center;padding:16px;color:#9ca3af">Calibrate axes to see values</td></tr>';
+    return;
+  }
+  var hh='<tr><th style="width:12px">#</th><th>X</th>';
+  for(var si=0;si<seriesData.length;si++){
+    hh+='<th><span style="color:'+seriesData[si].color+'">●</span> '+seriesData[si].name+'</th>';
+  }
+  hh+='</tr>';
+  thead.innerHTML=hh;
+
+  var data=buildWideData();
+  var nc=2+seriesData.length;
+  if(data.rows.length===0){tbody.innerHTML='<tr><td colspan="'+nc+'" style="text-align:center;padding:16px;color:#9ca3af">No data points yet</td></tr>';return;}
+  var h='';
+  for(var i=0;i<data.rows.length;i++){
+    var r=data.rows[i];
+    h+='<tr class="trow"><td style="color:#d1d5db;font-size:9px">'+(i+1)+'</td><td>'+fmtX(r.x)+'</td>';
+    for(var si=0;si<seriesData.length;si++){
+      if(r.ys[si])h+='<td>'+fmtY(r.ys[si].y)+'</td>';
+      else h+='<td style="color:#d1d5db">—</td>';
+    }
+    h+='</tr>';
+  }
+  tbody.innerHTML=h;
+  document.getElementById('ptCount').textContent=data.rows.length+' rows';
+}
+
+// ── Mouse events ─────────────────────────────────────────
+canvasArea.addEventListener('mousedown',function(e){
+  if(!img)return;e.preventDefault();
+  var c=mouseToImg(e),ix=c[0],iy=c[1];
+
+  // Panning
+  if(e.button===1||e.button===2||tool==='pan'){isPanning=true;panSX=e.clientX;panSY=e.clientY;panSPX=panX;panSPY=panY;canvasArea.style.cursor='grabbing';return;}
+
+  // Calibration picking
+  if(calMode==='x1'){
+    xPx[0]=ix; calMode='x2';
+    document.getElementById('pickXBtn').textContent='Click X2 on chart...';
+    document.getElementById('x1status').innerHTML='<span class="placed-check">✓</span>';
+    render(); return;
+  }
+  if(calMode==='x2'){
+    xPx[1]=ix; calMode=null;
+    document.getElementById('pickXBtn').textContent='Pick X1 & X2 on Chart';
+    document.getElementById('pickXBtn').className='btn';
+    document.getElementById('pickXBtn').style.cssText='width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px';
+    document.getElementById('x2status').innerHTML='<span class="placed-check">✓</span>';
+    updateCursor(); tryCalibrate(); render(); return;
+  }
+  if(calMode==='y1'){
+    yPx[0]=iy; calMode='y2';
+    document.getElementById('pickYBtn').textContent='Click Y1 on chart...';
+    document.getElementById('y1status').innerHTML='<span class="placed-check">✓</span>';
+    render(); return;
+  }
+  if(calMode==='y2'){
+    yPx[1]=iy; calMode=null;
+    document.getElementById('pickYBtn').textContent='Pick Y1 & Y2 on Chart';
+    document.getElementById('pickYBtn').className='btn';
+    document.getElementById('pickYBtn').style.cssText='width:100%;margin-top:4px;justify-content:center;font-size:10px;padding:4px 8px';
+    document.getElementById('y2status').innerHTML='<span class="placed-check">✓</span>';
+    updateCursor(); tryCalibrate(); render(); return;
+  }
+
+  if(!transform){showToast('Calibrate axes first');return;}
+  if(tool==='erase'){eraseNear(ix,iy);return;}
+  if(tool==='point')addPoint(ix,iy);
+  else if(tool==='draw'){isDrawingLine=true;lastDrawPt=[ix,iy];addPoint(ix,iy);}
+});
+var renderPending=false;
+function scheduleRender(){if(renderPending)return;renderPending=true;requestAnimationFrame(function(){renderPending=false;render();});}
+canvasArea.addEventListener('mousemove',function(e){if(!img)return;if(isPanning){panX=panSPX+(e.clientX-panSX);panY=panSPY+(e.clientY-panSY);scheduleRender();return;}var c=mouseToImg(e),ix=c[0],iy=c[1];if(transform){var v=pixelToValue(ix,iy);if(v)document.getElementById('cursorReadout').textContent=fmtX(v.x)+'  '+fmtY(v.y);}if(isDrawingLine&&tool==='draw'){if(lastDrawPt){var dd=(ix-lastDrawPt[0])*(ix-lastDrawPt[0])+(iy-lastDrawPt[1])*(iy-lastDrawPt[1]);if(dd<9/(zoom*zoom))return;}seriesData[activeIdx].points.push([ix,iy]);lastDrawPt=[ix,iy];scheduleRender();}if(tool==='erase'&&e.buttons===1)eraseNear(ix,iy);});
+canvasArea.addEventListener('mouseup',function(){if(isDrawingLine){dedupeByX();renderSeriesList();renderTable();}isPanning=false;isDrawingLine=false;lastDrawPt=null;updateCursor();});
+canvasArea.addEventListener('mouseleave',function(){isPanning=false;isDrawingLine=false;});
+canvasArea.addEventListener('wheel',function(e){e.preventDefault();zoomBy(e.deltaY<0?1.15:1/1.15);},{passive:false});
+canvasArea.addEventListener('contextmenu',function(e){e.preventDefault();});
+window.addEventListener('resize',function(){if(img)render();});
+document.addEventListener('keydown',function(e){if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undoLast();}if(e.key==='1')setTool('point');if(e.key==='2')setTool('draw');if(e.key==='3')setTool('erase');if(e.key==='4'||e.key===' '){e.preventDefault();setTool('pan');}});
+document.addEventListener('keyup',function(e){if(e.key===' '&&tool==='pan')setTool('point');});
+function buildCSV(){
+  var data=buildWideData();
+  if(data.rows.length===0)return null;
+  var csv='X';
+  for(var si=0;si<seriesData.length;si++) csv+=','+seriesData[si].name;
+  csv+='\n';
+  for(var i=0;i<data.rows.length;i++){
+    var r=data.rows[i];
+    csv+=fmtX(r.x);
+    for(var si=0;si<seriesData.length;si++){
+      csv+=','+(r.ys[si]?fmtY(r.ys[si].y):'');
+    }
+    csv+='\n';
+  }
+  return{csv:csv,count:data.rows.length};
+}
+function exportCSV(){
+  if(!transform){showToast('Calibrate first');return;}
+  var result=buildCSV();
+  if(!result){showToast('No data');return;}
+  // Try Blob download first (works in normal browsers)
+  try{
+    var blob=new Blob([result.csv],{type:'text/csv;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a');a.href=url;a.download='chart_data.csv';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded '+result.count+' rows');
+  }catch(e){
+    // Fallback: clipboard then modal
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(result.csv).then(function(){
+        showToast('Copied '+result.count+' rows to clipboard');
+      }).catch(function(){showExportModal(result.csv,result.count);});
+    } else {
+      showExportModal(result.csv,result.count);
+    }
+  }
+}
+function showExportModal(csv,count){
+  var existing=document.getElementById('exportModal');
+  if(existing)existing.remove();
+  var div=document.createElement('div');div.id='exportModal';
+  div.style.cssText='position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.4)';
+  div.innerHTML='<div style="background:#fff;border-radius:8px;padding:16px;width:500px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.2)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b style="font-size:13px">Export CSV — '+count+' rows</b><span onclick="document.getElementById(\'exportModal\').remove()" style="cursor:pointer;color:#999;font-size:18px">✕</span></div>'
+    +'<textarea id="exportText" style="flex:1;min-height:300px;font-family:monospace;font-size:11px;border:1px solid #d1d5db;border-radius:4px;padding:8px;resize:none;color:#1f2937" readonly>'+csv.replace(/</g,'&lt;')+'</textarea>'
+    +'<div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-accent" onclick="document.getElementById(\'exportText\').select();document.execCommand(\'copy\');showToast(\'Copied!\')">Copy All</button><button class="btn" onclick="document.getElementById(\'exportModal\').remove()">Close</button></div>'
+    +'</div>';
+  document.body.appendChild(div);
+  document.getElementById('exportText').select();
+}
+function showToast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+renderSeriesList();renderTable();updateCalBadge();
+</script>
+</body>
+</html>
